@@ -7,6 +7,7 @@ from deep_q_learning_skeleton import *
 timeHorizon = True
 
 def act_loop(env, agent, num_episodes):
+    # Initialize empty list to keep the statistics of the run
     stats = []
     for episode in range(num_episodes):
         observation = env.reset()
@@ -16,21 +17,21 @@ def act_loop(env, agent, num_episodes):
 
         print('---episode %d---' % episode)
         renderit = False
-        # if episode % 10 == 0:
-        #     renderit = True
+        if episode % 10 == 0:
+            renderit = True
 
         # for t in range(MAX_EPISODE_LENGTH):
         t = 0
         while True:
             t += 1
-            #if renderit:
-            #    env.render()
+            if renderit:
+               env.render()
             printing=False
             if t % 500 == 499:
                 printing = True
 
             if printing:
-                # print('---stage %d---' % t)
+                print('---stage %d---' % t)
                 agent.report()
 
             action = agent.select_action()
@@ -45,13 +46,15 @@ def act_loop(env, agent, num_episodes):
             agent.process_experience(action, observation, reward, done)
             if done:
                 print("Episode finished after {} timesteps".format(t+1))
-                #env.render()
+                env.render()
                 stats.append(agent.report())
                 # update the target network parameters
-                ql.Q_tar.load_state_dict(qn.state_dict())
+                if ql.Q_tar:
+                    ql.Q_tar.load_state_dict(qn.state_dict())
                 break
 
-    np.save("stats_v1_100000", stats)
+    # command to save the run statistics, for analysis purposes
+    # np.save("stats_v1_2", stats)
     env.close()
 
 
@@ -70,11 +73,12 @@ if __name__ == "__main__":
 
     discount = DEFAULT_DISCOUNT
 
-    # ql = QLearner(env, qn, discount) #<- QNet
+    # TODO: Coding exercises before 4: Without target network
+    ql = QLearner(env, qn, discount=discount) #<- QNet
 
     # TODO: Coding exercise 4: target network
-    target_qn = QNet_MLP(num_a, shape_o)
-    target_qn.load_state_dict(qn.state_dict())
-    ql = QLearner(env, qn, target_qn, discount)  # <- QNet
+    # target_qn = QNet_MLP(num_a, shape_o)
+    # target_qn.load_state_dict(qn.state_dict())
+    # ql = QLearner(env, qn, target_qn, discount)  # <- QNet
 
     act_loop(env, ql, NUM_EPISODES)
