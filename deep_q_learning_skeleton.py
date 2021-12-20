@@ -16,7 +16,7 @@ import debug_utils
 NUM_EPISODES = 500
 MAX_EPISODE_LENGTH = 30000
 
-RMSIZE = 10000 # replay memory size
+RMSIZE = 100000 # replay memory size
 BATCH_SIZE = 256  # size of replay memory batch (= the number of updates for each real step)
 
 # consistent with Shiverma's code:
@@ -30,8 +30,8 @@ Transition = collections.namedtuple('Transition',
 class ReplayMemory(object):
     # ReplayMemory should store the last "size" experiences
     # and be able to return a randomly sampled batch of experiences
-    def __init__(self, size):
-        self.memory = collections.deque([], maxlen=RMSIZE)
+    def __init__(self, size=RMSIZE):
+        self.memory = collections.deque([], maxlen=size)
 
     # Store experience in memory
     def store_experience(self, *args):
@@ -200,9 +200,12 @@ class QNet_MLP(QNet):
 
 
 class QLearner(object):
-    def __init__(self, env, q_function, discount=DEFAULT_DISCOUNT, rm_size=RMSIZE):
+    def __init__(self, env, q_function, q_target=None, discount=DEFAULT_DISCOUNT, rm_size=RMSIZE):
         self.env = env
         self.Q = q_function
+        # q-target
+        # if q_target:
+        #     self.Q_tar = q_target
         self.rm = ReplayMemory(rm_size)  # replay memory stores (a subset of) experience across episode
         self.discount = discount
 
@@ -236,12 +239,27 @@ class QLearner(object):
         self.cum_r += reward
         self.dis_r += reward * (self.discount ** self.stage)
         self.stage += 1
+
+        # if not self.Q_tar:
         self.Q.single_Q_update(prev_observation, action, observation, reward, done)
+        # else:
+        #     target_obs = self.Q_tar.obs_to_tensor(observation)
+        #     if done:
+        #         future_val = 0  # XXX<- needs to be a 0-tensor?
+        #         self.Q_tar.load_state_dict(self.Q.state_dict())
+        #     else:
+        #         future_val = self.Q_tar.max_Q_value(target_obs)
+        #     self.Q.single_Q_update(prev_observation, action, observation, reward, done)
         self.last_obs = observation
         self.rm.store_experience(prev_observation, action, observation, reward, done)
         if self.tot_stages > 10 * self.batch_size:
             batch = Transition(*zip(*self.rm.sample_batch(self.batch_size)))
-            self.Q.batch_Q_update(actions=batch.action, obs=batch.prev_obs, next_obs=batch.observation, rewards=batch.reward, dones=batch.done)
+            # if not self.Q_tar:
+            self.Q.batch_Q_update(actions=batch.action, obs=batch.prev_obs,
+                                   next_obs=batch.observation, rewards=batch.reward, dones=batch.done)
+            # else:
+            #     self.Q_tar.batch_Q_update(actions=batch.action, obs=batch.prev_obs,
+            #                               next_obs=batch.observation, rewards=batch.reward, dones=batch.done)
 
     def select_action(self):
         """select an action based on self.last_obs
@@ -264,16 +282,17 @@ class QLearner(object):
 
     def report(self):
         name = self.name
-        print("---")
-        print("%s: episode: %d" % (name, self.episode))
-        print("%s: stage:   %d" % (name, self.stage))
-        print("%s: totals stages:   %d" % (name, self.tot_stages))
-        print("%s: epsilon: %f" % (name, self.epsilon))
-        print("%s: cum_r:   %s" % (name, self.cum_r))
-        print("%s: dis_r:   %s" % (name, self.dis_r))
+        # print("---")
+        # print("%s: episode: %d" % (name, self.episode))
+        # print("%s: stage:   %d" % (name, self.stage))
+        # print("%s: totals stages:   %d" % (name, self.tot_stages))
+        # print("%s: epsilon: %f" % (name, self.epsilon))
+        # print("%s: cum_r:   %s" % (name, self.cum_r))
+        # print("%s: dis_r:   %s" % (name, self.dis_r))
         mean_r_this_ep = self.cum_r / self.stage if self.stage > 0 else "undef"
         mean_r = self.tot_r / self.tot_stages if self.tot_stages > 0 else "undef"
         mean_r_ep = self.tot_r / self.episode if self.episode > 0 else "undef"
-        print("%s: mean r in this episode:  %s" % (name, mean_r_this_ep))
-        print("%s: mean r in lifetime:      %s" % (name, mean_r))
-        print("%s: mean return per episode:   %s" % (name, mean_r_ep))
+        # print("%s: mean r in this episode:  %s" % (name, mean_r_this_ep))
+        # print("%s: mean r in lifetime:      %s" % (name, mean_r))
+        # print("%s: mean return per episode:   %s" % (name, mean_r_ep))
+        return([self.stage, self.cum_r, self.dis_r, mean_r_this_ep, mean_r, mean_r_ep])

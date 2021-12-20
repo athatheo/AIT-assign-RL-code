@@ -7,6 +7,7 @@ from deep_q_learning_skeleton import *
 timeHorizon = True
 
 def act_loop(env, agent, num_episodes):
+    stats = []
     for episode in range(num_episodes):
         observation = env.reset()
         if timeHorizon:
@@ -15,23 +16,22 @@ def act_loop(env, agent, num_episodes):
 
         print('---episode %d---' % episode)
         renderit = False
-        if episode % 10 == 0:
-            renderit = True
+        # if episode % 10 == 0:
+        #     renderit = True
 
         # for t in range(MAX_EPISODE_LENGTH):
         t = 0
         while True:
             t += 1
-            if renderit:
-                env.render()
+            #if renderit:
+            #    env.render()
             printing=False
             if t % 500 == 499:
                 printing = True
 
             if printing:
-                print('---stage %d---' % t)
+                # print('---stage %d---' % t)
                 agent.report()
-                print("obs:", observation)
 
             action = agent.select_action()
             observation, reward, done, info = env.step(action)
@@ -45,10 +45,11 @@ def act_loop(env, agent, num_episodes):
             agent.process_experience(action, observation, reward, done)
             if done:
                 print("Episode finished after {} timesteps".format(t+1))
-                env.render()
-                agent.report()
+                #env.render()
+                stats.append(agent.report())
                 break
 
+    np.save("stats_v1_100000", stats)
     env.close()
 
 
