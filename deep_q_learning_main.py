@@ -47,6 +47,8 @@ def act_loop(env, agent, num_episodes):
                 print("Episode finished after {} timesteps".format(t+1))
                 #env.render()
                 stats.append(agent.report())
+                # update the target network parameters
+                ql.Q_tar.load_state_dict(qn.state_dict())
                 break
 
     np.save("stats_v1_100000", stats)
@@ -68,11 +70,11 @@ if __name__ == "__main__":
 
     discount = DEFAULT_DISCOUNT
 
-    ql = QLearner(env, qn, discount) #<- QNet
+    # ql = QLearner(env, qn, discount) #<- QNet
 
     # TODO: Coding exercise 4: target network
-    # target_qn = QNet_MLP(num_a, shape_o)
-    # target_qn.load_state_dict(qn.state_dict())
-    # ql = QLearner(env, qn, target_qn, discount)  # <- QNet
+    target_qn = QNet_MLP(num_a, shape_o)
+    target_qn.load_state_dict(qn.state_dict())
+    ql = QLearner(env, qn, target_qn, discount)  # <- QNet
 
     act_loop(env, ql, NUM_EPISODES)
